@@ -1,75 +1,95 @@
-# React + TypeScript + Vite
+# CineScope
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**CineScope** is a modern, responsive movie discovery web application built with React, TypeScript, and Vite. It provides a dark cinematic interface for discovering trending titles, searching movies in real time, applying genre/year/sort filters, inspecting detailed movie information, and persisting favorite films locally.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Features
 
-## React Compiler
+- **Movie Discovery**: Browse popular and trending feature films powered by The Movie Database (TMDB) API.
+- **Real-Time Search**: Search movies dynamically with input debouncing and in-flight request cancellation (`AbortController`).
+- **Discovery Filters**: Filter titles by genre and release year, and sort by popularity, highest rating, or newest releases.
+- **Movie Details**: View comprehensive movie details including backdrop artwork, poster, rating, vote count, formatted runtime, genre pills, tagline, and full overview.
+- **Favorites Watchlist**: Save and remove favorite movies with persistent storage via `localStorage`. Synchronized in real-time across all application views.
+- **Responsive & Accessible**: Optimized for mobile, tablet, and desktop viewports with dark cinematic styling, zero horizontal overflow, and visible keyboard focus states.
+- **Resilient UI States**: Built-in loading skeletons, error messages with retry actions, and empty states.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Core**: React 19, TypeScript, Vite
+- **Routing**: React Router (`react-router-dom` v7)
+- **Styling**: Vanilla CSS (CSS Variables, Flexbox, Grid)
+- **Icons**: Lucide React
+- **Data Source**: TMDB API v3
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+---
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Getting Started
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Prerequisites
+
+- Node.js (v18 or higher recommended)
+- npm or pnpm package manager
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Alexks2007/cinescope.git
+   cd cinescope
+   ```
+
+2. Install project dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Configure Environment Variables:
+   Create a `.env` file in the root directory (you can copy `.env.example`):
+   ```bash
+   cp .env.example .env
+   ```
+
+   Add your TMDB API v3 Read Access Token:
+   ```env
+   VITE_TMDB_ACCESS_TOKEN=your_tmdb_read_access_token_here
+   ```
+
+4. Run the development server:
+   ```bash
+   npm run dev
+   ```
+
+---
+
+## Available Scripts
+
+- `npm run dev` - Starts local Vite development server.
+- `npm run build` - Compiles TypeScript and builds production bundle in `dist/`.
+- `npm run lint` - Runs ESLint code quality checks.
+- `npm run preview` - Locally previews the production build.
+
+---
+
+## Project Structure
 
 ```
-
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+src/
+├── components/         # Reusable UI components (Navbar, MovieCard, MovieGrid, SearchBar, FilterBar, LoadingSkeleton, ErrorMessage)
+├── context/            # Shared state contexts (FavoritesContext, FavoritesProvider)
+├── hooks/              # Custom React hooks (useFavorites)
+├── pages/              # Page view routes (Discover, Favorites, MovieDetails)
+├── services/           # External API & storage services (movieApi.ts, favorites.ts)
+├── types/              # TypeScript definitions and data interfaces (movie.ts)
+├── App.tsx             # Main application layout shell and route definitions
+├── index.css           # Global dark cinematic styling system and CSS variables
+└── main.tsx            # Application entry point
 ```
+
+---
+
+## Notes & Data Attribution
+
+This product uses the TMDB API but is not endorsed or certified by TMDB. Movie metadata and images are provided courtesy of [The Movie Database](https://www.themoviedb.org/).
