@@ -17,3 +17,17 @@ export interface TMDBResponse<T> {
   total_pages: number;
   total_results: number;
 }
+
+export interface Genre {
+  id: number;
+  name: string;
+}
+
+export type SortOption = 'popularity.desc' | 'vote_average.desc' | 'primary_release_date.desc';
+
+export interface DiscoverParams {
+  genreId?: number;
+  year?: number;
+  sortBy?: SortOption;
+  page?: number;
+}

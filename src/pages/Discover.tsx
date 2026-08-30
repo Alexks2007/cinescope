@@ -1,19 +1,53 @@
 import React, { useEffect, useState } from 'react';
 import { Film, SearchX } from 'lucide-react';
-import type { Movie } from '../types/movie';
-import { getPopularMovies, getSearchMovies } from '../services/movieApi';
+import type { Movie, Genre, SortOption, DiscoverParams } from '../types/movie';
+import {
+  getDiscoverMovies,
+  getSearchMovies,
+  getGenres,
+  FALLBACK_GENRES,
+} from '../services/movieApi';
 import { SearchBar } from '../components/SearchBar';
+import { FilterBar } from '../components/FilterBar';
 import { MovieGrid } from '../components/MovieGrid';
 import { LoadingSkeleton } from '../components/LoadingSkeleton';
 import { ErrorMessage } from '../components/ErrorMessage';
 
 export const Discover: React.FC = () => {
   const [movies, setMovies] = useState<Movie[]>([]);
+  const [genres, setGenres] = useState<Genre[]>(FALLBACK_GENRES);
+  const [selectedGenre, setSelectedGenre] = useState<string>('');
+  const [selectedYear, setSelectedYear] = useState<string>('');
+  const [selectedSort, setSelectedSort] = useState<SortOption>('popularity.desc');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [debouncedQuery, setDebouncedQuery] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState<number>(0);
+
+  // Fetch official TMDB genre list on mount (falls back gracefully if request fails)
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function loadGenres() {
+      try {
+        const fetchedGenres = await getGenres();
+        if (!isCancelled && fetchedGenres.length > 0) {
+          setGenres(fetchedGenres);
+        }
+      } catch {
+        if (!isCancelled) {
+          setGenres(FALLBACK_GENRES);
+        }
+      }
+    }
+
+    loadGenres();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
@@ -30,13 +64,36 @@ export const Discover: React.FC = () => {
     setError(null);
   };
 
+  const handleGenreChange = (genreId: string) => {
+    setSelectedGenre(genreId);
+    setIsLoading(true);
+  };
+
+  const handleYearChange = (year: string) => {
+    setSelectedYear(year);
+    setIsLoading(true);
+  };
+
+  const handleSortChange = (sort: SortOption) => {
+    setSelectedSort(sort);
+    setIsLoading(true);
+  };
+
+  const handleClearFilters = () => {
+    setSelectedGenre('');
+    setSelectedYear('');
+    setSelectedSort('popularity.desc');
+    setIsLoading(true);
+    setError(null);
+  };
+
   const handleRetry = () => {
     setIsLoading(true);
     setError(null);
     setReloadKey((prev) => prev + 1);
   };
 
-  // Debounce search query changes by 450ms
+  // Debounce search query input by 450ms
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(searchQuery);
@@ -47,7 +104,7 @@ export const Discover: React.FC = () => {
     };
   }, [searchQuery]);
 
-  // Fetch movies (Popular or Search) with AbortController race condition protection
+  // Main movies fetch effect (Search or Discover) with AbortController cancellation
   useEffect(() => {
     const controller = new AbortController();
     const trimmed = debouncedQuery.trim();
@@ -61,7 +118,12 @@ export const Discover: React.FC = () => {
             setError(null);
           }
         } else {
-          const response = await getPopularMovies(1, controller.signal);
+          const discoverParams: DiscoverParams = {
+            genreId: selectedGenre ? Number(selectedGenre) : undefined,
+            year: selectedYear ? Number(selectedYear) : undefined,
+            sortBy: selectedSort,
+          };
+          const response = await getDiscoverMovies(discoverParams, controller.signal);
           if (!controller.signal.aborted) {
             setMovies(response.results || []);
             setError(null);
@@ -88,7 +150,7 @@ export const Discover: React.FC = () => {
     return () => {
       controller.abort();
     };
-  }, [debouncedQuery, reloadKey]);
+  }, [debouncedQuery, selectedGenre, selectedYear, selectedSort, reloadKey]);
 
   const isSearching = debouncedQuery.trim().length >= 2;
 
@@ -96,12 +158,12 @@ export const Discover: React.FC = () => {
     <div className="discover-page">
       <header className="page-header">
         <h1 className="page-title">
-          {isSearching ? `Search Results for "${debouncedQuery.trim()}"` : 'Discover Popular Movies'}
+          {isSearching ? `Search Results for "${debouncedQuery.trim()}"` : 'Discover Movies'}
         </h1>
         <p className="page-subtitle">
           {isSearching
             ? 'Showing matching titles from TMDB.'
-            : 'Explore trending and high-rated feature films around the globe.'}
+            : 'Explore trending, top-rated, and categorized feature films.'}
         </p>
       </header>
 
@@ -110,6 +172,18 @@ export const Discover: React.FC = () => {
         onChange={handleSearchChange}
         onClear={handleClearSearch}
         placeholder="Search movies..."
+      />
+
+      <FilterBar
+        genres={genres}
+        selectedGenre={selectedGenre}
+        selectedYear={selectedYear}
+        selectedSort={selectedSort}
+        onGenreChange={handleGenreChange}
+        onYearChange={handleYearChange}
+        onSortChange={handleSortChange}
+        onClearFilters={handleClearFilters}
+        isSearchActive={isSearching}
       />
 
       {isLoading && <LoadingSkeleton count={12} />}
@@ -129,8 +203,8 @@ export const Discover: React.FC = () => {
           ) : (
             <>
               <Film size={40} style={{ color: 'var(--accent)', marginBottom: '1rem' }} />
-              <h3>No Movies Available</h3>
-              <p>There are currently no popular movies to display.</p>
+              <h3>No movies found</h3>
+              <p>No titles match the selected genre, year, and sort criteria. Try adjusting or clearing your filters.</p>
             </>
           )}
         </div>

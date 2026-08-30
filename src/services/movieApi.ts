@@ -1,7 +1,23 @@
-import type { Movie, TMDBResponse } from '../types/movie';
+import type { Movie, TMDBResponse, Genre, DiscoverParams } from '../types/movie';
 
 const BASE_URL = 'https://api.themoviedb.org/3';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
+
+/**
+ * Minimal fallback genres used strictly if TMDB genre endpoint request fails.
+ */
+export const FALLBACK_GENRES: Genre[] = [
+  { id: 28, name: 'Action' },
+  { id: 12, name: 'Adventure' },
+  { id: 16, name: 'Animation' },
+  { id: 35, name: 'Comedy' },
+  { id: 80, name: 'Crime' },
+  { id: 18, name: 'Drama' },
+  { id: 14, name: 'Fantasy' },
+  { id: 27, name: 'Horror' },
+  { id: 878, name: 'Science Fiction' },
+  { id: 53, name: 'Thriller' },
+];
 
 /**
  * Construct full image URL from TMDB poster/backdrop path.
@@ -72,4 +88,71 @@ export async function getSearchMovies(query: string, signal?: AbortSignal): Prom
 
   const data: TMDBResponse<Movie> = await response.json();
   return data.results || [];
+}
+
+/**
+ * Fetch official list of movie genres from TMDB /genre/movie/list.
+ * Returns static fallback if network or endpoint fails.
+ */
+export async function getGenres(signal?: AbortSignal): Promise<Genre[]> {
+  try {
+    const response = await fetch(`${BASE_URL}/genre/movie/list?language=en-US`, {
+      headers: getHeaders(),
+      signal,
+    });
+
+    if (!response.ok) {
+      return FALLBACK_GENRES;
+    }
+
+    const data: { genres: Genre[] } = await response.json();
+    return data.genres && data.genres.length > 0 ? data.genres : FALLBACK_GENRES;
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw err;
+    }
+    return FALLBACK_GENRES;
+  }
+}
+
+/**
+ * Discover movies with genre, release year, and sorting parameters from TMDB /discover/movie.
+ */
+export async function getDiscoverMovies(
+  params: DiscoverParams,
+  signal?: AbortSignal
+): Promise<TMDBResponse<Movie>> {
+  const queryParams = new URLSearchParams({
+    language: 'en-US',
+    page: String(params.page || 1),
+    sort_by: params.sortBy || 'popularity.desc',
+  });
+
+  if (params.genreId) {
+    queryParams.append('with_genres', String(params.genreId));
+  }
+
+  if (params.year) {
+    queryParams.append('primary_release_year', String(params.year));
+  }
+
+  // Filter out unrated titles when sorting by top votes
+  if (params.sortBy === 'vote_average.desc') {
+    queryParams.append('vote_count.gte', '100');
+  }
+
+  const response = await fetch(`${BASE_URL}/discover/movie?${queryParams.toString()}`, {
+    headers: getHeaders(),
+    signal,
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Authentication failed. Please verify your TMDB Access Token.');
+    }
+    throw new Error(`Failed to discover movies. (HTTP ${response.status})`);
+  }
+
+  const data: TMDBResponse<Movie> = await response.json();
+  return data;
 }
