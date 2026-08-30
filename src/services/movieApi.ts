@@ -29,9 +29,10 @@ const getHeaders = (): HeadersInit => {
 /**
  * Fetch popular movies from TMDB /movie/popular endpoint.
  */
-export async function getPopularMovies(page = 1): Promise<TMDBResponse<Movie>> {
+export async function getPopularMovies(page = 1, signal?: AbortSignal): Promise<TMDBResponse<Movie>> {
   const response = await fetch(`${BASE_URL}/movie/popular?language=en-US&page=${page}`, {
     headers: getHeaders(),
+    signal,
   });
 
   if (!response.ok) {
@@ -43,4 +44,32 @@ export async function getPopularMovies(page = 1): Promise<TMDBResponse<Movie>> {
 
   const data: TMDBResponse<Movie> = await response.json();
   return data;
+}
+
+/**
+ * Search movies from TMDB /search/movie endpoint.
+ */
+export async function getSearchMovies(query: string, signal?: AbortSignal): Promise<Movie[]> {
+  const trimmed = query.trim();
+  if (!trimmed) {
+    return [];
+  }
+
+  const response = await fetch(
+    `${BASE_URL}/search/movie?language=en-US&query=${encodeURIComponent(trimmed)}&page=1`,
+    {
+      headers: getHeaders(),
+      signal,
+    }
+  );
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Authentication failed. Please verify your TMDB Access Token.');
+    }
+    throw new Error(`Failed to search movies. (HTTP ${response.status})`);
+  }
+
+  const data: TMDBResponse<Movie> = await response.json();
+  return data.results || [];
 }
