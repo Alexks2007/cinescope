@@ -1,4 +1,4 @@
-import type { Movie, TMDBResponse, Genre, DiscoverParams } from '../types/movie';
+import type { Movie, TMDBResponse, Genre, DiscoverParams, MovieDetails } from '../types/movie';
 
 const BASE_URL = 'https://api.themoviedb.org/3';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
@@ -154,5 +154,28 @@ export async function getDiscoverMovies(
   }
 
   const data: TMDBResponse<Movie> = await response.json();
+  return data;
+}
+
+/**
+ * Fetch detailed movie information from TMDB /movie/{id} endpoint.
+ */
+export async function getMovieDetails(id: string, signal?: AbortSignal): Promise<MovieDetails> {
+  const response = await fetch(`${BASE_URL}/movie/${id}?language=en-US`, {
+    headers: getHeaders(),
+    signal,
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error('Movie not found.');
+    }
+    if (response.status === 401) {
+      throw new Error('Authentication failed. Please verify your TMDB Access Token.');
+    }
+    throw new Error(`Failed to load movie details. (HTTP ${response.status})`);
+  }
+
+  const data: MovieDetails = await response.json();
   return data;
 }
